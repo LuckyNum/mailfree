@@ -3,6 +3,8 @@
  * @module email/parser
  */
 
+import { extractVerificationCode as adapterExtract } from './adapters/index.js';
+
 /**
  * 解析邮件正文，提取文本和HTML内容
  * @param {string} raw - 原始邮件内容
@@ -210,7 +212,7 @@ function textToHtml(text) {
   return `<div style="white-space:pre-wrap">${escapeHtml(text)}</div>`;
 }
 
-function stripHtml(html) {
+export function stripHtml(html) {
   const s = String(html || '');
   return s
     .replace(/<script[\s\S]*?<\/script>/gi, ' ')
@@ -227,13 +229,29 @@ function stripHtml(html) {
 
 /**
  * 从邮件主题、文本和HTML中智能提取验证码（4-8位数字）
+ * 使用适配器模式，根据发件人自动选择最佳提取策略
  * @param {object} params - 提取参数对象
+ * @param {string} params.from - 发件人邮箱（可选）
  * @param {string} params.subject - 邮件主题
  * @param {string} params.text - 纯文本内容
  * @param {string} params.html - HTML内容
  * @returns {string} 提取的验证码，如果未找到返回空字符串
  */
-export function extractVerificationCode({ subject = '', text = '', html = '' } = {}) {
+export function extractVerificationCode({ from = '', subject = '', text = '', html = '' } = {}) {
+  try {
+    return adapterExtract({ from, subject, text, html });
+  } catch (e) {
+    console.error('Adapter extraction failed, using legacy:', e);
+    return extractVerificationCodeLegacy({ subject, text, html });
+  }
+}
+
+/**
+ * 原有的验证码提取逻辑（保留作为兜底方案）
+ * @param {object} params - 提取参数对象
+ * @returns {string} 提取的验证码
+ */
+function extractVerificationCodeLegacy({ subject = '', text = '', html = '' } = {}) {
   const subjectText = String(subject || '');
   const textBody = String(text || '');
   const htmlBody = stripHtml(html);

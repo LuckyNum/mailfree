@@ -152,7 +152,7 @@ export default {
       })();
       let verificationCode = '';
       try {
-        verificationCode = extractVerificationCode({ subject, text: textContent, html: htmlContent });
+        verificationCode = extractVerificationCode({ from: fromHeader, subject, text: textContent, html: htmlContent });
       } catch (_) { }
 
       // 存储到数据库
